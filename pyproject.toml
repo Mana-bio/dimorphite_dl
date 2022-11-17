@@ -1,10 +1,9 @@
 [tool.poetry]
-name = "dimorphite-dl"
+name = "dimorphite_dl"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "dimorphite_dl"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
