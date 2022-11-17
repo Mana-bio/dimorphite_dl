@@ -17,10 +17,10 @@ This script identifies and enumerates the possible protonation sites of SMILES
 strings.
 """
 
-from __future__ import print_function
+
+import argparse
 import copy
 import os
-import argparse
 import sys
 
 try:
@@ -47,11 +47,10 @@ def print_header():
 
 try:
     import rdkit
-    from rdkit import Chem
-    from rdkit.Chem import AllChem
 
     # Disable the unnecessary RDKit warnings
-    from rdkit import RDLogger
+    from rdkit import Chem, RDLogger
+    from rdkit.Chem import AllChem
 
     RDLogger.DisableLog("rdApp.*")
 except:
@@ -72,10 +71,11 @@ def main(params=None):
     """
 
     parser = ArgParseFuncs.get_args()
-    args = vars(parser.parse_args())
+    args, unknown = parser.parse_known_args()
+    args = vars(args)
 
-    if not args["silent"]:
-        print_header()
+    # if not args["silent"]:
+    #     print_header()
 
     # Add in any parameters in params.
     if params is not None:
@@ -411,7 +411,7 @@ class UtilFuncs:
         print(*args, file=sys.stderr, **kwargs)
 
 
-class LoadSMIFile(object):
+class LoadSMIFile:
     """A generator class for loading in the SMILES strings from a file, one at
     a time."""
 
@@ -426,7 +426,7 @@ class LoadSMIFile(object):
 
         if type(filename) is str:
             # It's a filename
-            self.f = open(filename, "r")
+            self.f = open(filename)
         else:
             # It's a file object (i.e., StringIO)
             self.f = filename
@@ -521,7 +521,7 @@ class LoadSMIFile(object):
             return self.next()
 
 
-class Protonate(object):
+class Protonate:
     """A generator class for protonating SMILES strings, one at a time."""
 
     def __init__(self, args):
@@ -546,7 +546,9 @@ class Protonate(object):
 
         # Load the substructures that can be protonated.
         self.subs = ProtSubstructFuncs.load_protonation_substructs_calc_state_for_ph(
-            self.args["min_ph"], self.args["max_ph"], self.args["pka_precision"]
+            float(self.args["min_ph"]),
+            float(self.args["max_ph"]),
+            float(self.args["pka_precision"]),
         )
 
     def __iter__(self):
@@ -658,12 +660,7 @@ class Protonate(object):
         # stdev value is big enough, for example, will generate two identical
         # BOTH states. Let's remove this redundancy.
         new_smis = list(
-            set(
-                [
-                    Chem.MolToSmiles(m, isomericSmiles=True, canonical=True)
-                    for m in new_mols
-                ]
-            )
+            {Chem.MolToSmiles(m, isomericSmiles=True, canonical=True) for m in new_mols}
         )
 
         # Sometimes Dimorphite-DL generates molecules that aren't actually
@@ -690,6 +687,7 @@ class Protonate(object):
             new_lines = [x + "\t" + tag + "\t" + states for x in new_smis]
         else:
             new_lines = [x + "\t" + tag for x in new_smis]
+        new_lines = [line.strip() for line in new_lines]
 
         self.cur_prot_SMI = new_lines
 
@@ -715,7 +713,7 @@ class ProtSubstructFuncs:
         site_structures_file = "{}/{}".format(pwd, "site_substructures.smarts")
         lines = [
             l
-            for l in open(site_structures_file, "r")
+            for l in open(site_structures_file)
             if l.strip() != "" and not l.startswith("#")
         ]
 
@@ -741,7 +739,7 @@ class ProtSubstructFuncs:
         for line in ProtSubstructFuncs.load_substructre_smarts_file():
             line = line.strip()
             sub = {}
-            if line is not "":
+            if line:
                 splits = line.split()
                 sub["name"] = splits[0]
                 sub["smart"] = splits[1]
@@ -913,7 +911,10 @@ class ProtSubstructFuncs:
                 try:
                     mol_copy = Chem.RemoveHs(mol_copy)
                 except:
-                    if "silent" in ProtSubstructFuncs.args and not ProtSubstructFuncs.args["silent"]:
+                    if (
+                        "silent" in ProtSubstructFuncs.args
+                        and not ProtSubstructFuncs.args["silent"]
+                    ):
                         UtilFuncs.eprint(
                             "WARNING: Skipping poorly formed SMILES string: "
                             + Chem.MolToSmiles(mol_copy)
@@ -1124,7 +1125,7 @@ class TestFuncs:
             "pka_precision": 0.5,
             "smiles": "",
             "label_states": True,
-            "silent": True
+            "silent": True,
         }
 
         for smi, protonated, deprotonated, category in smis:
@@ -1268,7 +1269,7 @@ class TestFuncs:
                             "min_ph": ph,
                             "max_ph": ph,
                             "pka_precision": 0,
-                            "silent": True
+                            "silent": True,
                         }
                     )
                 )
@@ -1324,7 +1325,7 @@ class TestFuncs:
             UtilFuncs.eprint(msg)
             raise Exception(msg)
 
-        if len(set([l[0] for l in output]) - set(expected_output)) != 0:
+        if len({l[0] for l in output} - set(expected_output)) != 0:
             msg = (
                 args["smiles"]
                 + " is not "
@@ -1339,7 +1340,7 @@ class TestFuncs:
             UtilFuncs.eprint(msg)
             raise Exception(msg)
 
-        if len(set([l[1] for l in output]) - set(labels)) != 0:
+        if len({l[1] for l in output} - set(labels)) != 0:
             msg = (
                 args["smiles"]
                 + " not labeled as "
@@ -1350,8 +1351,8 @@ class TestFuncs:
             UtilFuncs.eprint(msg)
             raise Exception(msg)
 
-        ph_range = sorted(list(set([args["min_ph"], args["max_ph"]])))
-        ph_range_str = "(" + " - ".join("{0:.2f}".format(n) for n in ph_range) + ")"
+        ph_range = sorted(list({args["min_ph"], args["max_ph"]}))
+        ph_range_str = "(" + " - ".join("{:.2f}".format(n) for n in ph_range) + ")"
         print(
             "(CORRECT) "
             + ph_range_str.ljust(10)
@@ -1375,7 +1376,16 @@ def run(**kwargs):
     """
 
     # Run the main function with the specified arguments.
-    main(kwargs)
+    return main(kwargs)
+
+
+def run_single_mol(mol, ph, pka_precision=0.0):
+    if isinstance(mol, str):
+        mol = Chem.MolFromSmiles(mol)
+    result = run_with_mol_list([mol], min_ph=ph, max_ph=ph, pka_precision=pka_precision)
+    if len(result) != 1:
+        raise ValueError(f"Expected one molecule, got {len(result)}")
+    return result[0]
 
 
 def run_with_mol_list(mol_lst, **kwargs):
