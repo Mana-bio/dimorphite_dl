@@ -3,6 +3,7 @@ name = "dimorphite-dl"
 version = "1.2.4"
 description = ""
 authors = ["Guy Rosin <guy@mana.bio>"]
+packages = [{ include = "dimorphite_dl" }]
 
 
 [build-system]
