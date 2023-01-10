@@ -68,7 +68,7 @@ def main(params=None):
     args, unknown = parser.parse_known_args()
     args = vars(args)
 
-    if not args.get("silent"):
+    if not args.get("silent", True):
         print_header()
 
     # Add in any parameters in params.
@@ -208,7 +208,7 @@ class ArgParseFuncs:
         )
         parser.add_argument(
             "--silent",
-            action="store_true",
+            action="store_false",
             help="do not print any messages to the screen",
         )
         parser.add_argument(
@@ -474,7 +474,7 @@ class LoadSMIFile:
             # into a canonical form. Filter if failed.
             mol = UtilFuncs.convert_smiles_str_to_mol(smiles_str)
             if mol is None:
-                if not self.args.get("silent"):
+                if not self.args.get("silent", True):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
@@ -483,7 +483,7 @@ class LoadSMIFile:
             # Handle nuetralizing the molecules. Filter if failed.
             mol = UtilFuncs.neutralize_mol(mol)
             if mol is None:
-                if not self.args.get("silent"):
+                if not self.args.get("silent", True):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
@@ -493,14 +493,14 @@ class LoadSMIFile:
             try:
                 mol = Chem.RemoveHs(mol)
             except:
-                if not self.args.get("silent"):
+                if not self.args.get("silent", True):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
                 return self.next()
 
             if mol is None:
-                if not self.args.get("silent"):
+                if not self.args.get("silent", True):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
@@ -626,7 +626,7 @@ class Protonate:
                 new_mols = ProtSubstructFuncs.protonate_site(new_mols, site)
                 if len(new_mols) > self.args["max_variants"]:
                     new_mols = new_mols[: self.args["max_variants"]]
-                    if not self.args.get("silent"):
+                    if not self.args.get("silent", True):
                         UtilFuncs.eprint(
                             "WARNING: Limited number of variants to "
                             + str(self.args["max_variants"])
@@ -905,7 +905,7 @@ class ProtSubstructFuncs:
                 try:
                     mol_copy = Chem.RemoveHs(mol_copy)
                 except:
-                    if not ProtSubstructFuncs.get("silent"):
+                    if not ProtSubstructFuncs.get("silent", True):
                         UtilFuncs.eprint(
                             "WARNING: Skipping poorly formed SMILES string: "
                             + Chem.MolToSmiles(mol_copy)
