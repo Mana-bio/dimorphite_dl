@@ -22,13 +22,7 @@ import argparse
 import copy
 import os
 import sys
-
-try:
-    # Python2
-    from StringIO import StringIO
-except ImportError:
-    # Python3
-    from io import StringIO
+from io import StringIO
 
 
 def print_header():
@@ -74,8 +68,8 @@ def main(params=None):
     args, unknown = parser.parse_known_args()
     args = vars(args)
 
-    # if not args["silent"]:
-    #     print_header()
+    if not args.get("silent"):
+        print_header()
 
     # Add in any parameters in params.
     if params is not None:
@@ -480,7 +474,7 @@ class LoadSMIFile:
             # into a canonical form. Filter if failed.
             mol = UtilFuncs.convert_smiles_str_to_mol(smiles_str)
             if mol is None:
-                if "silent" in self.args and not self.args["silent"]:
+                if not self.args.get("silent"):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
@@ -489,7 +483,7 @@ class LoadSMIFile:
             # Handle nuetralizing the molecules. Filter if failed.
             mol = UtilFuncs.neutralize_mol(mol)
             if mol is None:
-                if "silent" in self.args and not self.args["silent"]:
+                if not self.args.get("silent"):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
@@ -499,14 +493,14 @@ class LoadSMIFile:
             try:
                 mol = Chem.RemoveHs(mol)
             except:
-                if "silent" in self.args and not self.args["silent"]:
+                if not self.args.get("silent"):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
                 return self.next()
 
             if mol is None:
-                if "silent" in self.args and not self.args["silent"]:
+                if not self.args.get("silent"):
                     UtilFuncs.eprint(
                         "WARNING: Skipping poorly formed SMILES string: " + line
                     )
@@ -632,7 +626,7 @@ class Protonate:
                 new_mols = ProtSubstructFuncs.protonate_site(new_mols, site)
                 if len(new_mols) > self.args["max_variants"]:
                     new_mols = new_mols[: self.args["max_variants"]]
-                    if "silent" in self.args and not self.args["silent"]:
+                    if not self.args.get("silent"):
                         UtilFuncs.eprint(
                             "WARNING: Limited number of variants to "
                             + str(self.args["max_variants"])
@@ -911,10 +905,7 @@ class ProtSubstructFuncs:
                 try:
                     mol_copy = Chem.RemoveHs(mol_copy)
                 except:
-                    if (
-                        "silent" in ProtSubstructFuncs.args
-                        and not ProtSubstructFuncs.args["silent"]
-                    ):
+                    if not ProtSubstructFuncs.get("silent"):
                         UtilFuncs.eprint(
                             "WARNING: Skipping poorly formed SMILES string: "
                             + Chem.MolToSmiles(mol_copy)
