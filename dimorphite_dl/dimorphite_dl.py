@@ -100,7 +100,7 @@ def main(params=None):
             with open(args["output_file"], "w") as file:
                 for protonated_smi in Protonate(args):
                     file.write(protonated_smi + "\n")
-        elif "return_as_list" in args and args["return_as_list"] == True:
+        elif args.get("return_as_list"):
             return list(Protonate(args))
         else:
             # No output file specified. Just print it to the screen.
@@ -250,7 +250,7 @@ class ArgParseFuncs:
             if args[key] is None:
                 del args[key]
 
-        if not "smiles" in args and not "smiles_file" in args:
+        if "smiles" not in args and "smiles_file" not in args:
             msg = "Error: No SMILES in params. Use the -h parameter for help."
             print(msg)
             raise Exception(msg)
@@ -840,7 +840,7 @@ class ProtSubstructFuncs:
                         category = site[1]
                         new_site = (match[proton], category, item["name"])
 
-                        if not new_site in protonation_sites:
+                        if new_site not in protonation_sites:
                             # Because sites must be unique.
                             protonation_sites.append(new_site)
 
@@ -1352,7 +1352,7 @@ class TestFuncs:
             raise Exception(msg)
 
         ph_range = sorted(list({args["min_ph"], args["max_ph"]}))
-        ph_range_str = "(" + " - ".join("{:.2f}".format(n) for n in ph_range) + ")"
+        ph_range_str = "(" + " - ".join(f"{n:.2f}" for n in ph_range) + ")"
         print(
             "(CORRECT) "
             + ph_range_str.ljust(10)
