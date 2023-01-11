@@ -905,7 +905,7 @@ class ProtSubstructFuncs:
                 try:
                     mol_copy = Chem.RemoveHs(mol_copy)
                 except:
-                    if not ProtSubstructFuncs.get("silent", True):
+                    if not ProtSubstructFuncs.args.get("silent", True):
                         UtilFuncs.eprint(
                             "WARNING: Skipping poorly formed SMILES string: "
                             + Chem.MolToSmiles(mol_copy)
