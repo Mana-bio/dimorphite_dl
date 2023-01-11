@@ -22,6 +22,7 @@ import argparse
 import copy
 import os
 import sys
+from functools import lru_cache
 from io import StringIO
 
 
@@ -51,6 +52,16 @@ except:
     msg = "Dimorphite-DL requires RDKit. See https://www.rdkit.org/"
     print(msg)
     raise Exception(msg)
+
+
+@lru_cache(maxsize=100_000)
+def mol_to_smiles(mol):
+    return Chem.MolToSmiles(mol)
+
+
+@lru_cache(maxsize=100_000)
+def mol_from_smiles(mol):
+    return Chem.MolFromSmiles(mol)
 
 
 def main(params=None):
@@ -382,7 +393,7 @@ class UtilFuncs:
         os.dup2(stderr_pipe[1], stderr_fileno)
         os.close(stderr_pipe[1])
 
-        mol = Chem.MolFromSmiles(smiles_str)
+        mol = mol_from_smiles(smiles_str)
 
         os.close(stderr_fileno)
         os.close(stderr_pipe[0])
@@ -507,7 +518,7 @@ class LoadSMIFile:
                 return self.next()
 
             # Regenerate the smiles string (to standardize).
-            new_mol_string = Chem.MolToSmiles(mol, isomericSmiles=True)
+            new_mol_string = mol_to_smiles(mol)
 
             return {"smiles": new_mol_string, "data": splits[1:]}
         else:
@@ -637,7 +648,7 @@ class Protonate:
                 # Go through each of these new molecules and add them to the
                 # properly_formed_smi_found, in case you generate a poorly
                 # formed SMILES in the future and have to "rewind."
-                properly_formed_smi_found += [Chem.MolToSmiles(m) for m in new_mols]
+                properly_formed_smi_found += [mol_to_smiles(m) for m in new_mols]
         else:
             # Deprotonate the mols (because protonate_site never called to do
             # it).
@@ -647,15 +658,13 @@ class Protonate:
             # Go through each of these new molecules and add them to the
             # properly_formed_smi_found, in case you generate a poorly formed
             # SMILES in the future and have to "rewind."
-            properly_formed_smi_found.append(Chem.MolToSmiles(mol_used_to_idx_sites))
+            properly_formed_smi_found.append(mol_to_smiles(mol_used_to_idx_sites))
 
         # In some cases, the script might generate redundant molecules.
         # Phosphonates, when the pH is between the two pKa values and the
         # stdev value is big enough, for example, will generate two identical
         # BOTH states. Let's remove this redundancy.
-        new_smis = list(
-            {Chem.MolToSmiles(m, isomericSmiles=True, canonical=True) for m in new_mols}
-        )
+        new_smis = list({mol_to_smiles(m) for m in new_mols})
 
         # Sometimes Dimorphite-DL generates molecules that aren't actually
         # possible. Simply convert these to mol objects to eliminate the bad
@@ -908,7 +917,7 @@ class ProtSubstructFuncs:
                     if not ProtSubstructFuncs.args.get("silent", True):
                         UtilFuncs.eprint(
                             "WARNING: Skipping poorly formed SMILES string: "
-                            + Chem.MolToSmiles(mol_copy)
+                            + mol_to_smiles(mol_copy)
                         )
                     continue
 
@@ -950,7 +959,7 @@ class ProtSubstructFuncs:
 
                 # Deprotonating protonated aromatic nitrogen gives [nH-]. Change this
                 # to [n-].
-                if "[nH-]" in Chem.MolToSmiles(mol_copy):
+                if "[nH-]" in mol_to_smiles(mol_copy):
                     atom.SetNumExplicitHs(0)
 
                 mol_copy.UpdatePropertyCache(strict=False)
@@ -1372,7 +1381,7 @@ def run(**kwargs):
 
 def run_single_mol(mol, ph, pka_precision=0.0):
     if isinstance(mol, str):
-        mol = Chem.MolFromSmiles(mol)
+        mol = mol_from_smiles(mol)
     result = run_with_mol_list([mol], min_ph=ph, max_ph=ph, pka_precision=pka_precision)
     if len(result) != 1:
         raise ValueError(f"Expected one molecule, got {len(result)}")
@@ -1417,7 +1426,7 @@ def run_with_mol_list(mol_lst, **kwargs):
     protonated_smiles_and_props = []
     for m in mol_lst:
         props = m.GetPropsAsDict()
-        kwargs["smiles"] = Chem.MolToSmiles(m, isomericSmiles=True)
+        kwargs["smiles"] = mol_to_smiles(m)
         protonated_smiles_and_props.extend(
             [(s.split("\t")[0], props) for s in main(kwargs)]
         )
@@ -1426,7 +1435,7 @@ def run_with_mol_list(mol_lst, **kwargs):
     # objects. Also, add back in the properties from the original mol objects.
     mols = []
     for s, props in protonated_smiles_and_props:
-        m = Chem.MolFromSmiles(s)
+        m = mol_from_smiles(s)
         if m:
             for prop, val in props.items():
                 if type(val) is int:
