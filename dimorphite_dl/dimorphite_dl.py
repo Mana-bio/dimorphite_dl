@@ -395,7 +395,6 @@ class UtilFuncs:
 
         mol = mol_from_smiles(smiles_str)
 
-        os.close(stderr_fileno)
         os.close(stderr_pipe[0])
         os.dup2(stderr_save, stderr_fileno)
         os.close(stderr_save)
